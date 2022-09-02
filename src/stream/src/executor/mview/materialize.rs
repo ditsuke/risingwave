@@ -123,7 +123,7 @@ impl<S: StateStore> MaterializeExecutor<S> {
             let msg = msg?;
             yield match msg {
                 Message::Chunk(chunk) => {
-                    self.state_table.write_chunk(chunk.clone());
+                    // self.state_table.write_chunk(chunk.clone());
                     Message::Chunk(chunk)
                 }
                 Message::Barrier(b) => {
