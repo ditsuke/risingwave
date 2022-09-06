@@ -537,109 +537,110 @@ impl Dispatcher for HashDataDispatcher {
 
     fn dispatch_data(&mut self, chunk: StreamChunk) -> Self::DataFuture<'_> {
         async move {
-            // A chunk can be shuffled into multiple output chunks that to be sent to downstreams.
-            // In these output chunks, the only difference are visibility map, which is calculated
-            // by the hash value of each line in the input chunk.
-            let num_outputs = self.outputs.len();
+            //// A chunk can be shuffled into multiple output chunks that to be sent to downstreams.
+            //// In these output chunks, the only difference are visibility map, which is calculated
+            //// by the hash value of each line in the input chunk.
+            //let num_outputs = self.outputs.len();
 
-            // get hash value of every line by its key
-            let hash_builder = Crc32FastBuilder {};
-            let vnodes = chunk
-                .data_chunk()
-                .get_hash_values(&self.keys, hash_builder)
-                .into_iter()
-                .map(|hash| hash.to_vnode())
-                .collect_vec();
+            //// get hash value of every line by its key
+            //let hash_builder = CRC32FastBuilder {};
+            //let vnodes = chunk
+            //    .data_chunk()
+            //    .get_hash_values(&self.keys, hash_builder)
+            //    .unwrap()
+            //    .into_iter()
+            //    .map(|hash| hash.to_vnode())
+            //    .collect_vec();
 
-            tracing::trace!(target: "events::stream::dispatch::hash", "\n{}\n keys {:?} => {:?}", chunk.to_pretty_string(), self.keys, vnodes);
+            //tracing::trace!(target: "events::stream::dispatch::hash", "\n{}\n keys {:?} => {:?}", chunk.to_pretty_string(), self.keys, vnodes);
 
-            let mut vis_maps = repeat_with(|| BitmapBuilder::with_capacity(chunk.capacity()))
-                .take(num_outputs)
-                .collect_vec();
-            let mut last_vnode_when_update_delete = 0;
-            let mut new_ops: Vec<Op> = Vec::with_capacity(chunk.capacity());
+            //let mut vis_maps = repeat_with(|| BitmapBuilder::with_capacity(chunk.capacity()))
+            //    .take(num_outputs)
+            //    .collect_vec();
+            //let mut last_vnode_when_update_delete = 0;
+            //let mut new_ops: Vec<Op> = Vec::with_capacity(chunk.capacity());
 
-            let (ops, columns, visibility) = chunk.into_inner();
+            //let (ops, columns, visibility) = chunk.into_inner();
 
-            match visibility {
-                None => {
-                    vnodes.iter().zip_eq(ops).for_each(|(vnode, op)| {
-                        // get visibility map for every output chunk
-                        for (output, vis_map) in self.outputs.iter().zip_eq(vis_maps.iter_mut()) {
-                            vis_map.append(self.hash_mapping[*vnode as usize] == output.actor_id());
-                        }
-                        // The 'update' message, noted by an UpdateDelete and a successive
-                        // UpdateInsert, need to be rewritten to common
-                        // Delete and Insert if they were dispatched to
-                        // different actors.
-                        if op == Op::UpdateDelete {
-                            last_vnode_when_update_delete = *vnode;
-                        } else if op == Op::UpdateInsert {
-                            if *vnode != last_vnode_when_update_delete {
-                                new_ops.push(Op::Delete);
-                                new_ops.push(Op::Insert);
-                            } else {
-                                new_ops.push(Op::UpdateDelete);
-                                new_ops.push(Op::UpdateInsert);
-                            }
-                        } else {
-                            new_ops.push(op);
-                        }
-                    });
-                }
-                Some(visibility) => {
-                    vnodes
-                        .iter()
-                        .zip_eq(visibility.iter())
-                        .zip_eq(ops)
-                        .for_each(|((vnode, visible), op)| {
-                            for (output, vis_map) in self.outputs.iter().zip_eq(vis_maps.iter_mut())
-                            {
-                                vis_map.append(
-                                    visible && self.hash_mapping[*vnode as usize] == output.actor_id(),
-                                );
-                            }
-                            if !visible {
-                                new_ops.push(op);
-                                return;
-                            }
-                            if op == Op::UpdateDelete {
-                                last_vnode_when_update_delete = *vnode;
-                            } else if op == Op::UpdateInsert {
-                                if *vnode != last_vnode_when_update_delete {
-                                    new_ops.push(Op::Delete);
-                                    new_ops.push(Op::Insert);
-                                    panic!("Update of the same pk is shuffled to different partitions, which might cause problems. We forbid this for now.");
-                                } else {
-                                    new_ops.push(Op::UpdateDelete);
-                                    new_ops.push(Op::UpdateInsert);
-                                }
-                            } else {
-                                new_ops.push(op);
-                            }
-                        });
-                }
-            }
+            //match visibility {
+            //    None => {
+            //        vnodes.iter().zip_eq(ops).for_each(|(vnode, op)| {
+            //            // get visibility map for every output chunk
+            //            for (output, vis_map) in self.outputs.iter().zip_eq(vis_maps.iter_mut()) {
+            //                vis_map.append(self.hash_mapping[*vnode as usize] == output.actor_id());
+            //            }
+            //            // The 'update' message, noted by an UpdateDelete and a successive
+            //            // UpdateInsert, need to be rewritten to common
+            //            // Delete and Insert if they were dispatched to
+            //            // different actors.
+            //            if op == Op::UpdateDelete {
+            //                last_vnode_when_update_delete = *vnode;
+            //            } else if op == Op::UpdateInsert {
+            //                if *vnode != last_vnode_when_update_delete {
+            //                    new_ops.push(Op::Delete);
+            //                    new_ops.push(Op::Insert);
+            //                } else {
+            //                    new_ops.push(Op::UpdateDelete);
+            //                    new_ops.push(Op::UpdateInsert);
+            //                }
+            //            } else {
+            //                new_ops.push(op);
+            //            }
+            //        });
+            //    }
+            //    Some(visibility) => {
+            //        vnodes
+            //            .iter()
+            //            .zip_eq(visibility.iter())
+            //            .zip_eq(ops)
+            //            .for_each(|((vnode, visible), op)| {
+            //                for (output, vis_map) in self.outputs.iter().zip_eq(vis_maps.iter_mut())
+            //                {
+            //                    vis_map.append(
+            //                        visible && self.hash_mapping[*vnode as usize] == output.actor_id(),
+            //                    );
+            //                }
+            //                if !visible {
+            //                    new_ops.push(op);
+            //                    return;
+            //                }
+            //                if op == Op::UpdateDelete {
+            //                    last_vnode_when_update_delete = *vnode;
+            //                } else if op == Op::UpdateInsert {
+            //                    if *vnode != last_vnode_when_update_delete {
+            //                        new_ops.push(Op::Delete);
+            //                        new_ops.push(Op::Insert);
+            //                        panic!("Update of the same pk is shuffled to different partitions, which might cause problems. We forbid this for now.");
+            //                    } else {
+            //                        new_ops.push(Op::UpdateDelete);
+            //                        new_ops.push(Op::UpdateInsert);
+            //                    }
+            //                } else {
+            //                    new_ops.push(op);
+            //                }
+            //            });
+            //    }
+            //}
 
-            let ops = new_ops;
+            //let ops = new_ops;
 
-            // individually output StreamChunk integrated with vis_map
-            for (vis_map, output) in vis_maps.into_iter().zip_eq(self.outputs.iter_mut()) {
-                let vis_map = vis_map.finish();
-                // columns is not changed in this function
-                let new_stream_chunk =
-                    StreamChunk::new(ops.clone(), columns.clone(), Some(vis_map));
-                if new_stream_chunk.cardinality() > 0 {
-                    event!(
-                        tracing::Level::TRACE,
-                        msg = "chunk",
-                        downstream = output.actor_id(),
-                        "send = \n{:#?}",
-                        new_stream_chunk
-                    );
-                    output.send(Message::Chunk(new_stream_chunk)).await?;
-                }
-            }
+            //// individually output StreamChunk integrated with vis_map
+            //for (vis_map, output) in vis_maps.into_iter().zip_eq(self.outputs.iter_mut()) {
+            //    let vis_map = vis_map.finish();
+            //    // columns is not changed in this function
+            //    let new_stream_chunk =
+            //        StreamChunk::new(ops.clone(), columns.clone(), Some(vis_map));
+            //    if new_stream_chunk.cardinality() > 0 {
+            //        event!(
+            //            tracing::Level::TRACE,
+            //            msg = "chunk",
+            //            downstream = output.actor_id(),
+            //            "send = \n{:#?}",
+            //            new_stream_chunk
+            //        );
+            //        output.send(Message::Chunk(new_stream_chunk)).await?;
+            //    }
+            //}
             Ok(())
         }
     }
