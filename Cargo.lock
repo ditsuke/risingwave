@@ -4682,6 +4682,7 @@ dependencies = [
  "madsim-etcd-client",
  "madsim-tokio",
  "madsim-tonic",
+ "maplit",
  "memcomparable",
  "num-integer",
  "num-traits",
