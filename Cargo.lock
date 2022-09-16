@@ -4679,6 +4679,7 @@ dependencies = [
  "hex",
  "hyper",
  "itertools",
+ "lazy_static",
  "madsim-etcd-client",
  "madsim-tokio",
  "madsim-tonic",
