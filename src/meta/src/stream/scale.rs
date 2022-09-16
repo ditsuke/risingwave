@@ -891,6 +891,8 @@ where
 
                             let (original_indices, data) = compress_data(&actor_mapping);
 
+
+
                             Some(ActorMapping {
                                 original_indices,
                                 data,
@@ -1176,22 +1178,7 @@ where
                             updated_bitmap.get(&downstream_fragment_id)
                         {
                             // if downstream scale in/out
-                            let mut raw = vec![0 as ActorId; VIRTUAL_NODE_COUNT];
-
-                            for (actor_id, bitmap) in downstream_updated_bitmap {
-                                for (idx, pos) in raw.iter_mut().enumerate() {
-                                    if bitmap.is_set(idx).unwrap() {
-                                        *pos = *actor_id;
-                                    }
-                                }
-                            }
-
-                            let (original_indices, data) = compress_data(&raw);
-
-                            *mapping = ActorMapping {
-                                original_indices,
-                                data,
-                            }
+                            *mapping = Self::build_actor_mapping_from_bitmap(downstream_updated_bitmap)
                         }
                     }
                 }
@@ -1199,6 +1186,25 @@ where
         }
 
         Ok(())
+    }
+
+    fn build_actor_mapping_from_bitmap(actor_bitmaps: &HashMap<ActorId, Bitmap>) -> ActorMapping {
+        let mut raw = vec![0 as ActorId; VIRTUAL_NODE_COUNT];
+
+        for (actor_id, bitmap) in actor_bitmaps {
+            for (idx, pos) in raw.iter_mut().enumerate() {
+                if bitmap.is_set(idx).unwrap() {
+                    *pos = *actor_id;
+                }
+            }
+        }
+
+        let (original_indices, data) = compress_data(&raw);
+
+        ActorMapping {
+            original_indices,
+            data,
+        }
     }
 }
 
