@@ -26,6 +26,7 @@ use risingwave_storage::hummock::file_cache::cache::{FileCache, FileCacheOptions
 use risingwave_storage::hummock::file_cache::metrics::FileCacheMetrics;
 use risingwave_storage::hummock::{TieredCacheKey, TieredCacheValue};
 use tokio::sync::oneshot;
+use tracing::Instrument;
 
 use crate::analyze::{analyze, monitor, Hook, Metrics};
 use crate::rate::RateLimiter;
@@ -301,7 +302,12 @@ async fn read(
         }
 
         let start = Instant::now();
-        let hit = cache.get(&key).await.unwrap().is_some();
+        let hit = cache
+            .get(&key)
+            .instrument(tracing::info_span!("read_once").or_current())
+            .await
+            .unwrap()
+            .is_some();
         let lat = start.elapsed().as_micros() as u64;
         if hit {
             metrics

@@ -21,6 +21,7 @@ use nix::sys::statfs::{statfs, FsType as NixFsType, EXT4_SUPER_MAGIC};
 use parking_lot::RwLock;
 use risingwave_common::cache::{LruCache, LruCacheEventListener};
 use tokio::sync::RwLock as AsyncRwLock;
+use tracing::Instrument;
 
 use super::error::{Error, Result};
 use super::file::{CacheFile, CacheFileOptions};
@@ -305,9 +306,14 @@ where
         StoreBatchWriter::new(self, self.block_size, self.buffer_capacity, item_capacity)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get(&self, slot: SlotId) -> Result<Vec<u8>> {
         // Read guard should be held during reading meta and loading data.
-        let guard = self.meta_file.read().await;
+        let guard = self
+            .meta_file
+            .read()
+            .instrument(tracing::info_span!("meta_file_read_lock"))
+            .await;
 
         let (bloc, _key) = guard.get(slot).ok_or(Error::InvalidSlot(slot))?;
         let offset = bloc.bidx as u64 * self.block_size as u64;
