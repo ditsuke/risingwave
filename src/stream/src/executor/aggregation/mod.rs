@@ -332,6 +332,7 @@ pub async fn generate_managed_agg_state<S: StateStore>(
     agg_calls: &[AggCall],
     pk_indices: PkIndices,
     epoch: u64,
+    extreme_cache_size: usize,
     state_tables: &[StateTable<S>],
     state_table_col_mappings: &[Arc<StateTableColumnMapping>],
 ) -> StreamExecutorResult<AggState<S>> {
@@ -348,6 +349,7 @@ pub async fn generate_managed_agg_state<S: StateStore>(
             pk_indices.clone(),
             idx == ROW_COUNT_COLUMN,
             key,
+            extreme_cache_size,
             &state_tables[idx],
             state_table_col_mappings[idx].clone(),
         )

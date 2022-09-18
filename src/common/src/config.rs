@@ -233,6 +233,18 @@ pub struct DeveloperConfig {
     /// rows data, see `stream_actor_in_record_cnt` and `stream_actor_out_record_cnt` instead.
     #[serde(default = "default::developer_enable_executor_row_count")]
     pub enable_executor_row_count: bool,
+
+    /// Limit number of cached entries (one per group key)
+    #[serde(default = "default::developer_hash_agg_cache_size")]
+    pub hash_agg_cache_size: usize,
+
+    /// Limit number of the cached entries (one per join key) on each side.
+    #[serde(default = "default::developer_join_cache_size")]
+    pub join_cache_size: usize,
+
+    /// Limit number of the cached entries in an extreme aggregation call
+    #[serde(default = "default::developer_extreme_cache_size")]
+    pub extreme_cache_size: usize,
 }
 
 impl Default for DeveloperConfig {
@@ -359,6 +371,18 @@ mod default {
 
     pub fn developer_enable_executor_row_count() -> bool {
         false
+    }
+
+    pub fn developer_hash_agg_cache_size() -> usize {
+        1 << 16
+    }
+
+    pub fn developer_join_cache_size() -> usize {
+        1 << 16
+    }
+
+    pub fn developer_extreme_cache_size() -> usize {
+        1 << 10
     }
 }
 
