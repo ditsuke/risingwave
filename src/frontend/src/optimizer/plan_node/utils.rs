@@ -152,6 +152,7 @@ impl TableCatalogBuilder {
         append_only: bool,
         column_mapping: &[usize],
         vnode_col_idx: Option<usize>,
+        value_indices: Vec<usize>,
     ) -> TableCatalog {
         // Transform indices to set for checking.
         let input_dist_key_indices_set: HashSet<usize> =
@@ -178,10 +179,11 @@ impl TableCatalogBuilder {
             .collect();
         let vnode_col_idx_in_table_columns =
             vnode_col_idx.and_then(|x| column_mapping.iter().position(|col_idx| *col_idx == x));
-        self.build(
+        self.build_with_value_indices(
             dist_indices_on_table_columns,
             append_only,
             vnode_col_idx_in_table_columns,
+            value_indices,
         )
     }
 

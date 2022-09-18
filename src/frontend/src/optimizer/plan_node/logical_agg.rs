@@ -356,11 +356,13 @@ impl LogicalAgg {
                 internal_table_catalog_builder.add_column(&in_fields[include_key]);
                 column_mapping.push(include_key);
             }
+            let value_indices = vec![internal_table_catalog_builder.get_columns().len() - 1];
             internal_table_catalog_builder.build_with_column_mapping(
                 in_dist_key.clone(),
                 in_append_only,
                 column_mapping,
                 vnode_col_idx,
+                value_indices,
             )
         };
 
@@ -377,11 +379,13 @@ impl LogicalAgg {
                 column_mapping.push(idx);
             }
             internal_table_catalog_builder.add_column(&out_fields[value_key]);
+            let value_indices = vec![internal_table_catalog_builder.get_columns().len() - 1];
             internal_table_catalog_builder.build_with_column_mapping(
                 in_dist_key.clone(),
                 in_append_only,
                 column_mapping,
                 vnode_col_idx,
+                value_indices,
             )
         };
         // Map input col idx -> table col idx.
