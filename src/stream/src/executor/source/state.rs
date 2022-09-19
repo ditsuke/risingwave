@@ -68,7 +68,7 @@ impl<S: StateStore> SourceStateHandler<S> {
                 table_id: self.keyspace.table_id(),
             });
             states.iter().for_each(|state| {
-                let value = state.encode_to_bytes();
+                let value = state.encode_to_string();
                 local_batch.put(&*state.id(), StorageValue::new_default_put(value));
             });
             // If an error is returned, the underlying state should be rollback
@@ -152,8 +152,8 @@ mod tests {
             self.partition.clone().into()
         }
 
-        fn encode_to_bytes(&self) -> Bytes {
-            Bytes::from(serde_json::to_string(self).unwrap())
+        fn encode_to_string(&self) -> String {
+            serde_json::to_string(self).unwrap()
         }
 
         fn restore_from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {
@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(offset, state_instance.offset);
         assert_eq!(partition, state_instance.partition);
         println!("TestSourceState = {:?}", state_instance);
-        let encode_value = state_instance.encode_to_bytes();
+        let encode_value = state_instance.encode_to_string();
         let decode_value = TestSourceState::restore_from_bytes(&encode_value)?;
         println!("decode from Bytes instance = {:?}", decode_value);
         assert_eq!(offset, decode_value.offset);

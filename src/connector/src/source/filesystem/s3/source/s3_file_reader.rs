@@ -121,8 +121,8 @@ impl SplitMetaData for S3FileSplit {
         format!("{}/{}", self.bucket, self.s3_file.object.path).into()
     }
 
-    fn encode_to_bytes(&self) -> Bytes {
-        Bytes::from(serde_json::to_string(self).unwrap())
+    fn encode_to_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 
     fn restore_from_bytes(bytes: &[u8]) -> Result<Self> {

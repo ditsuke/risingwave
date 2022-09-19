@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
+use risingwave_common::array::Row;
 use risingwave_common::catalog::{ColumnId, Field, Schema, TableId};
+use risingwave_common::types::{Datum, ScalarImpl};
+use risingwave_storage::table::streaming_table::state_table::StateTable;
 use tokio::sync::mpsc::unbounded_channel;
 
 use super::*;
@@ -52,10 +57,42 @@ impl ExecutorBuilder for SourceExecutorBuilder {
             Field::with_name(column_desc.data_type.clone(), column_desc.name.clone())
         }));
         let schema = Schema::new(fields);
-        let keyspace = Keyspace::table_root(store, &TableId::new(node.state_table_id));
+        println!("state table: {:?}", node.state_table);
+        let keyspace = Keyspace::table_root(
+            store.clone(),
+            &TableId::new(node.state_table.as_ref().unwrap().id),
+        );
         let vnodes = params
             .vnode_bitmap
             .expect("vnodes not set for source executor");
+
+        // futures::executor::block_on(async {
+        //     let mut state_table = StateTable::from_table_catalog(
+        //         &node.state_table.as_ref().unwrap(),
+        //         store,
+        //         Some(Arc::new(vnodes.clone())),
+        //     );
+        //     let a: Arc<str> = String::from("a").into();
+        //     let a: Datum = Some(ScalarImpl::Utf8(a.as_ref().into()));
+        //     let b: Arc<str> = String::from("b").into();
+        //     let b: Datum = Some(ScalarImpl::Utf8(b.as_ref().into()));
+        //
+        //     state_table.insert(Row::new(vec![a, b]));
+        //     state_table.commit(100100).await.unwrap();
+        //
+        //     let a: Arc<str> = String::from("a").into();
+        //     let a: Datum = Some(ScalarImpl::Utf8(a.as_ref().into()));
+        //     let c: Arc<str> = String::from("c").into();
+        //     let c: Datum = Some(ScalarImpl::Utf8(c.as_ref().into()));
+        //
+        //     state_table.insert(Row::new(vec![a, c]));
+        //     state_table.commit(100101).await.unwrap();
+        //
+        //     let a: Arc<str> = String::from("a").into();
+        //     let a: Datum = Some(ScalarImpl::Utf8(a.as_ref().into()));
+        //     let resp = state_table.get_row(&Row::new(vec![a]), 100102).await.unwrap();
+        //     println!("{:?}", resp);
+        // });
 
         Ok(Box::new(SourceExecutor::new(
             params.actor_context,

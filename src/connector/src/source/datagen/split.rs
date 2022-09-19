@@ -32,8 +32,8 @@ impl SplitMetaData for DatagenSplit {
         format!("{}-{}", self.split_num, self.split_index).into()
     }
 
-    fn encode_to_bytes(&self) -> Bytes {
-        Bytes::from(serde_json::to_string(self).unwrap())
+    fn encode_to_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 
     fn restore_from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {

@@ -177,7 +177,7 @@ pub struct SourceMessage {
 /// The metadata of a split.
 pub trait SplitMetaData: Sized {
     fn id(&self) -> SplitId;
-    fn encode_to_bytes(&self) -> Bytes;
+    fn encode_to_string(&self) -> String;
     fn restore_from_bytes(bytes: &[u8]) -> Result<Self>;
 }
 
@@ -232,7 +232,7 @@ mod tests {
         let split_impl = SplitImpl::Kafka(split.clone());
         let get_value = split_impl.into_kafka().unwrap();
         println!("{:?}", get_value);
-        assert_eq!(split.encode_to_bytes(), get_value.encode_to_bytes());
+        assert_eq!(split.encode_to_string(), get_value.encode_to_bytes());
 
         Ok(())
     }

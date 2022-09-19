@@ -29,6 +29,7 @@ use risingwave_connector::source::{ConnectorState, SplitId, SplitImpl, SplitMeta
 use risingwave_source::connector_source::SourceContext;
 use risingwave_source::row_id::RowIdGenerator;
 use risingwave_source::*;
+use risingwave_storage::table::streaming_table::state_table::StateTable;
 use risingwave_storage::{Keyspace, StateStore};
 use tokio::sync::mpsc::UnboundedReceiver;
 

@@ -51,7 +51,7 @@ macro_rules! impl_split {
         impl From<&SplitImpl> for ConnectorSplit {
             fn from(split: &SplitImpl) -> Self {
                 match split {
-                    $( SplitImpl::$variant_name(inner) => ConnectorSplit { split_type: String::from($connector_name), encoded_split: inner.encode_to_bytes().to_vec() }, )*
+                    $( SplitImpl::$variant_name(inner) => ConnectorSplit { split_type: String::from($connector_name), encoded_split: inner.encode_to_string(), }, )*
                 }
             }
         }
@@ -76,8 +76,8 @@ macro_rules! impl_split {
                 }
             }
 
-            fn encode_to_bytes(&self) -> Bytes {
-                Bytes::from(ConnectorSplit::from(self).encode_to_vec())
+            fn encode_to_string(&self) -> String {
+                ConnectorSplit::from(self).to_string()
             }
 
             fn restore_from_bytes(bytes: &[u8]) -> Result<Self> {
