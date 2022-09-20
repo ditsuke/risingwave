@@ -352,6 +352,10 @@ impl StateStore for MemoryStateStore {
     fn clear_shared_buffer(&self) -> Self::ClearSharedBufferFuture<'_> {
         async move { Ok(()) }
     }
+
+    fn should_pause_write(&self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        None
+    }
 }
 
 pub struct MemoryStateStoreIter {

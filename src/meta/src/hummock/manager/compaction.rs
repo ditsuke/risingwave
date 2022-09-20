@@ -16,8 +16,10 @@ use std::collections::BTreeMap;
 
 use function_name::named;
 use itertools::Itertools;
+use risingwave_hummock_sdk::compaction_group::hummock_version_ext::HummockVersionExt;
 use risingwave_hummock_sdk::{CompactionGroupId, HummockCompactionTaskId, HummockContextId};
-use risingwave_pb::hummock::{CompactTaskAssignment, CompactionConfig};
+use risingwave_pb::hummock::hummock_version::Levels;
+use risingwave_pb::hummock::{CompactTaskAssignment, CompactionConfig, HummockVersion};
 
 use crate::hummock::compaction::CompactStatus;
 use crate::hummock::error::{Error, Result};
@@ -115,12 +117,11 @@ where
     pub async fn get_compaction_config(
         &self,
         compaction_group_id: CompactionGroupId,
-    ) -> CompactionConfig {
+    ) -> Result<CompactionConfig> {
         self.compaction_group_manager
-            .compaction_group(compaction_group_id)
+            .compaction_group_compaction_config(compaction_group_id)
             .await
-            .expect("compaction group exists")
-            .compaction_config()
+            .ok_or(Error::InvalidCompactionGroup(compaction_group_id))
     }
 
     #[named]
@@ -136,6 +137,31 @@ where
             })
             .collect_vec()
     }
+
+    /// Returns if should pause write to hummock.
+    pub async fn calc_should_pause_write(&self, version: &HummockVersion) -> Result<bool> {
+        for cg_id in self.compaction_group_manager.compaction_group_ids().await {
+            let config = self.get_compaction_config(cg_id).await?;
+            if calc_should_pause_write(version.get_compaction_group_levels(cg_id), &config) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
+pub fn calc_should_pause_write(levels: &Levels, _compaction_config: &CompactionConfig) -> bool {
+    // TODO refine this
+    let l0_file_number = levels
+        .l0
+        .as_ref()
+        .unwrap()
+        .sub_levels
+        .iter()
+        .map(|l| l.table_infos.len())
+        .sum::<usize>();
+    let l0_file_number_threshold = 500;
+    l0_file_number >= l0_file_number_threshold
 }
 
 #[cfg(test)]

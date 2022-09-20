@@ -140,6 +140,10 @@ impl StateStore for PanicStateStore {
             panic!("should not clear shared buffer from the panic state store!");
         }
     }
+
+    fn should_pause_write(&self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        panic!("should not call should_pause_write from the panic state store!");
+    }
 }
 
 pub struct PanicStateStoreIter {}

@@ -62,6 +62,10 @@ impl<S: MetaStore> CompactionGroupManager<S> {
         Ok(instance)
     }
 
+    /// Get all compaction groups.
+    ///
+    /// Please use a more specific method whenever possible, to avoid clone the whole compaction
+    /// group.
     pub async fn compaction_groups(&self) -> Vec<CompactionGroup> {
         self.inner
             .read()
@@ -82,8 +86,24 @@ impl<S: MetaStore> CompactionGroupManager<S> {
             .collect_vec()
     }
 
+    /// Get the target compaction group if exists.
+    ///
+    /// Please use a more specific method whenever possible, to avoid clone the whole compaction
+    /// group.
     pub async fn compaction_group(&self, id: CompactionGroupId) -> Option<CompactionGroup> {
         self.inner.read().await.compaction_groups.get(&id).cloned()
+    }
+
+    pub async fn compaction_group_compaction_config(
+        &self,
+        id: CompactionGroupId,
+    ) -> Option<CompactionConfig> {
+        self.inner
+            .read()
+            .await
+            .compaction_groups
+            .get(&id)
+            .map(|v| v.compaction_config())
     }
 
     /// Registers `table_fragments` to compaction groups.

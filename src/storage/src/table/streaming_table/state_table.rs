@@ -555,6 +555,10 @@ impl<S: StateStore> StateTable<S> {
 
     pub async fn commit(&mut self, new_epoch: u64) -> StorageResult<()> {
         let mem_table = std::mem::take(&mut self.mem_table).into_parts();
+        if let Some(rx) = self.keyspace.state_store().should_pause_write() {
+            // TODO: write of high priority may bypass the stall. e.g. to avoid OOM.
+            let _ = rx.await;
+        }
         self.batch_write_rows(mem_table, new_epoch).await?;
         self.update_epoch(new_epoch);
         Ok(())

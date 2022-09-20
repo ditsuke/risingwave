@@ -624,6 +624,10 @@ impl StateStore for HummockStorage {
             Ok(())
         }
     }
+
+    fn should_pause_write(&self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        self.write_stall_hint.lock().should_pause_write()
+    }
 }
 
 pub struct HummockStateStoreIter {

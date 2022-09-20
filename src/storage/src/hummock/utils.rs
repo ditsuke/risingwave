@@ -280,3 +280,41 @@ pub fn check_subset_preserve_order<T: Eq>(
     }
     true
 }
+
+/// `WriteStallHint` tells whether write to hummock should be stalled.
+///
+/// All of its methods should be lightweight. None of them should directly block caller.
+///
+/// Caller of `should_pause_write` decides whether to block on the returned receiver, if any.
+#[derive(Default)]
+pub struct WriteStallHint {
+    should_pause_write: bool,
+    wait_queue: Vec<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl WriteStallHint {
+    pub fn new() -> Self {
+        Self {
+            should_pause_write: false,
+            wait_queue: vec![],
+        }
+    }
+
+    pub fn set_should_pause_write(&mut self, should_pause: bool) {
+        if self.should_pause_write && !should_pause {
+            for wait in self.wait_queue.drain(..) {
+                let _ = wait.send(());
+            }
+        }
+        self.should_pause_write = should_pause;
+    }
+
+    pub fn should_pause_write(&mut self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        if self.should_pause_write {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            self.wait_queue.push(tx);
+            return Some(rx);
+        }
+        None
+    }
+}

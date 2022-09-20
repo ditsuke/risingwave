@@ -287,6 +287,10 @@ where
                 .inspect_err(|e| error!("Failed in clear_shared_buffer: {:?}", e))
         }
     }
+
+    fn should_pause_write(&self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        self.inner.should_pause_write()
+    }
 }
 
 impl MonitoredStateStore<HummockStorage> {
@@ -300,6 +304,10 @@ impl MonitoredStateStore<HummockStorage> {
 
     pub fn sstable_id_manager(&self) -> SstableIdManagerRef {
         self.inner.sstable_id_manager().clone()
+    }
+
+    pub fn as_hummock_storage_ref(&self) -> &HummockStorage {
+        &self.inner
     }
 }
 

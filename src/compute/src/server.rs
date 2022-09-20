@@ -126,21 +126,19 @@ pub async fn compute_node_serve(
     .unwrap();
 
     let mut extra_info_sources: Vec<ExtraInfoSourceRef> = vec![];
+    let compute_observer_node =
+        ComputeObserverNode::new(filter_key_extractor_manager.clone(), state_store.clone());
+    let observer_manager = ObserverManager::new(
+        meta_client.clone(),
+        client_addr.clone(),
+        Box::new(compute_observer_node),
+        WorkerType::ComputeNode,
+    )
+    .await;
+    let observer_join_handle = observer_manager.start().await.unwrap();
+    join_handle_vec.push(observer_join_handle);
+
     if let StateStoreImpl::HummockStateStore(storage) = &state_store {
-        let local_version_manager = storage.local_version_manager();
-        let compute_observer_node =
-            ComputeObserverNode::new(filter_key_extractor_manager.clone(), local_version_manager);
-        let observer_manager = ObserverManager::new(
-            meta_client.clone(),
-            client_addr.clone(),
-            Box::new(compute_observer_node),
-            WorkerType::ComputeNode,
-        )
-        .await;
-
-        let observer_join_handle = observer_manager.start().await.unwrap();
-        join_handle_vec.push(observer_join_handle);
-
         assert!(
             storage
                 .local_version_manager()

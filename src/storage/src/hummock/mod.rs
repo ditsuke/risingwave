@@ -74,6 +74,7 @@ use crate::hummock::shared_buffer::shared_buffer_batch::SharedBufferBatch;
 use crate::hummock::shared_buffer::{OrderSortedUncommittedData, UncommittedData};
 use crate::hummock::sstable::SstableIteratorReadOptions;
 use crate::hummock::sstable_store::{SstableStoreRef, TableHolder};
+use crate::hummock::utils::WriteStallHint;
 use crate::monitor::StoreLocalStatistic;
 
 /// Hummock is the state store backend.
@@ -96,6 +97,8 @@ pub struct HummockStorage {
 
     #[cfg(not(madsim))]
     tracing: Arc<risingwave_tracing::RwTracingService>,
+
+    write_stall_hint: Arc<parking_lot::Mutex<WriteStallHint>>,
 }
 
 impl HummockStorage {
@@ -155,6 +158,7 @@ impl HummockStorage {
             sstable_id_manager,
             #[cfg(not(madsim))]
             tracing: Arc::new(risingwave_tracing::RwTracingService::new()),
+            write_stall_hint: Arc::new(parking_lot::Mutex::new(WriteStallHint::new())),
         };
         Ok(instance)
     }
@@ -280,5 +284,11 @@ impl HummockStorage {
             self.stats.get_shared_buffer_hit_counts.inc();
             v
         })
+    }
+
+    pub fn set_should_pause_write(&self, should_pause: bool) {
+        self.write_stall_hint
+            .lock()
+            .set_should_pause_write(should_pause);
     }
 }

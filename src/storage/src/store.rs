@@ -210,6 +210,12 @@ pub trait StateStore: Send + Sync + 'static + Clone {
     fn clear_shared_buffer(&self) -> Self::ClearSharedBufferFuture<'_> {
         todo!()
     }
+
+    /// Returns a receiver to suggest caller to pause write, because the store is overloaded or any
+    /// other reason. The receiver will be sent when write can be resumed.
+    ///
+    /// Returns None to suggest no need to pause write.
+    fn should_pause_write(&self) -> Option<tokio::sync::oneshot::Receiver<()>>;
 }
 
 pub trait StateStoreIter: Send + 'static {

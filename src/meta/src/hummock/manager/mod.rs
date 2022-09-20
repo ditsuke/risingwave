@@ -40,7 +40,8 @@ use risingwave_pb::hummock::subscribe_compact_tasks_response::Task;
 use risingwave_pb::hummock::{
     pin_version_response, CompactTask, CompactTaskAssignment, HummockPinnedSnapshot,
     HummockPinnedVersion, HummockSnapshot, HummockVersion, HummockVersionDelta,
-    HummockVersionDeltas, Level, LevelDelta, LevelType, OverlappingLevel, ValidationTask,
+    HummockVersionDeltas, HummockVersionDeltasWithStats, Level, LevelDelta, LevelType,
+    OverlappingLevel, ValidationTask,
 };
 use risingwave_pb::meta::subscribe_response::{Info, Operation};
 use risingwave_pb::meta::MetaLeaderInfo;
@@ -611,19 +612,12 @@ where
             .compaction_statuses
             .contains_key(&compaction_group_id)
         {
-            let group_config = self
-                .compaction_group_manager()
-                .compaction_group(compaction_group_id)
-                .await
-                .ok_or(Error::InvalidCompactionGroup(compaction_group_id))?;
+            let group_config = self.get_compaction_config(compaction_group_id).await?;
             let mut compact_statuses =
                 BTreeMapTransaction::new(&mut compaction.compaction_statuses);
             let new_compact_status = compact_statuses.new_entry_insert_txn(
                 compaction_group_id,
-                CompactStatus::new(
-                    compaction_group_id,
-                    group_config.compaction_config().max_level,
-                ),
+                CompactStatus::new(compaction_group_id, group_config.max_level),
             );
             commit_multi_var!(self, None, new_compact_status)?;
         }
@@ -649,7 +643,7 @@ where
             task_id as HummockCompactionTaskId,
             compaction_group_id,
             manual_compaction_option,
-            self.get_compaction_config(compaction_group_id).await,
+            self.get_compaction_config(compaction_group_id).await?,
         );
         let mut compact_task = match compact_task {
             None => {
@@ -714,7 +708,7 @@ where
 
             compact_task.compaction_filter_mask = self
                 .get_compaction_config(compact_status.compaction_group_id())
-                .await
+                .await?
                 .compaction_filter_mask;
             commit_multi_var!(self, None, compact_status)?;
 
@@ -967,18 +961,25 @@ where
 
             current_version.apply_version_delta(&version_delta);
 
+            let should_pause_write = self.calc_should_pause_write(current_version).await?;
+            let deltas = HummockVersionDeltas {
+                version_deltas: vec![versioning
+                    .hummock_version_deltas
+                    .last_key_value()
+                    .unwrap()
+                    .1
+                    .clone()],
+            };
             self.env
                 .notification_manager()
                 .notify_compute_asynchronously(
                     Operation::Add,
-                    Info::HummockVersionDeltas(risingwave_pb::hummock::HummockVersionDeltas {
-                        version_deltas: vec![versioning
-                            .hummock_version_deltas
-                            .last_key_value()
-                            .unwrap()
-                            .1
-                            .clone()],
-                    }),
+                    Info::HummockVersionDeltas(
+                        risingwave_pb::hummock::HummockVersionDeltasWithStats {
+                            deltas: Some(deltas),
+                            should_pause_write,
+                        },
+                    ),
                 );
         } else {
             // The compaction task is cancelled or failed.
@@ -1224,17 +1225,24 @@ where
                     current_epoch: self.max_current_epoch.load(Ordering::Relaxed),
                 }),
             );
+        let should_pause_write = self
+            .calc_should_pause_write(&versioning.current_version)
+            .await?;
+        let deltas = HummockVersionDeltas {
+            version_deltas: vec![versioning
+                .hummock_version_deltas
+                .last_key_value()
+                .unwrap()
+                .1
+                .clone()],
+        };
         self.env
             .notification_manager()
             .notify_compute_asynchronously(
                 Operation::Add,
-                Info::HummockVersionDeltas(risingwave_pb::hummock::HummockVersionDeltas {
-                    version_deltas: vec![versioning
-                        .hummock_version_deltas
-                        .last_key_value()
-                        .unwrap()
-                        .1
-                        .clone()],
+                Info::HummockVersionDeltas(HummockVersionDeltasWithStats {
+                    deltas: Some(deltas),
+                    should_pause_write,
                 }),
             );
 
