@@ -80,6 +80,8 @@ macro_rules! for_all_metrics {
 
             sstable_avg_key_size: Histogram,
             sstable_avg_value_size: Histogram,
+
+            write_stall_counts: GenericCounter<AtomicU64>,
         }
     };
 }
@@ -422,6 +424,12 @@ impl StateStoreMetrics {
         );
 
         let sstable_avg_value_size = register_histogram_with_registry!(opts, registry).unwrap();
+        let write_stall_counts = register_int_counter_with_registry!(
+            "state_store_write_stall_counts",
+            "Total number of write that is stalled.",
+            registry
+        )
+        .unwrap();
 
         Self {
             get_duration,
@@ -472,6 +480,8 @@ impl StateStoreMetrics {
 
             sstable_avg_key_size,
             sstable_avg_value_size,
+
+            write_stall_counts,
         }
     }
 
