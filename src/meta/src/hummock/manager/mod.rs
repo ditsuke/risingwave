@@ -643,6 +643,9 @@ where
                 .fold(max_committed_epoch, std::cmp::min);
             (versioning_guard.current_version.clone(), watermark)
         };
+        if !current_version.levels.get(&compaction_group_id).is_none() {
+            return Err(Error::InvalidCompactionGroup(compaction_group_id));
+        }
         let can_trivial_move = manual_compaction_option.is_none();
         let compact_task = compact_status.get_compact_task(
             current_version.get_compaction_group_levels(compaction_group_id),
@@ -720,18 +723,6 @@ where
 
             // this task has been finished.
             compact_task.set_task_status(TaskStatus::Pending);
-
-            trigger_sst_stat(
-                &self.metrics,
-                Some(
-                    compaction
-                        .compaction_statuses
-                        .get(&compaction_group_id)
-                        .ok_or(Error::InvalidCompactionGroup(compaction_group_id))?,
-                ),
-                &current_version,
-                compaction_group_id,
-            );
 
             tracing::trace!(
                 "For compaction group {}: pick up {} tables in level {} to compact.  cost time: {:?}",
@@ -1179,7 +1170,34 @@ where
                 .or_default()
                 .level_deltas;
             let version_l0 = new_hummock_version
-                .get_compaction_group_levels_mut(compaction_group_id)
+                .levels
+                .entry(compaction_group_id)
+                .or_insert({
+                    let mut levels = vec![];
+                    for l in 0..self
+                        .compaction_group_manager
+                        .compaction_group(compaction_group_id)
+                        .await
+                        .unwrap()
+                        .compaction_config()
+                        .max_level
+                    {
+                        levels.push(Level {
+                            level_idx: (l + 1) as u32,
+                            level_type: LevelType::Nonoverlapping as i32,
+                            table_infos: vec![],
+                            total_file_size: 0,
+                            sub_level_id: 0,
+                        });
+                    }
+                    Levels {
+                        levels,
+                        l0: Some(OverlappingLevel {
+                            sub_levels: vec![],
+                            total_file_size: 0,
+                        }),
+                    }
+                })
                 .l0
                 .as_mut()
                 .expect("Expect level 0 is not empty");
