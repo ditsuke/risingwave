@@ -24,6 +24,8 @@ use risingwave_pb::hummock::{
 use crate::prost_key_range::KeyRangeExt;
 use crate::{can_concat, CompactionGroupId, HummockSstableId};
 
+pub const MAX_LEVEL: u64 = 6;
+
 pub struct LevelDeltasSummary {
     pub delete_sst_levels: Vec<u32>,
     pub delete_sst_ids_set: HashSet<u64>,
@@ -189,6 +191,28 @@ impl HummockVersionExt for HummockVersion {
 
     fn apply_version_delta(&mut self, version_delta: &HummockVersionDelta) {
         for (compaction_group_id, level_deltas) in &version_delta.level_deltas {
+            if !self.levels.contains_key(compaction_group_id) {
+                let mut levels = vec![];
+                for l in 0..MAX_LEVEL {
+                    levels.push(Level {
+                        level_idx: (l + 1) as u32,
+                        level_type: LevelType::Nonoverlapping as i32,
+                        table_infos: vec![],
+                        total_file_size: 0,
+                        sub_level_id: 0,
+                    });
+                }
+                self.levels.insert(
+                    *compaction_group_id,
+                    Levels {
+                        levels,
+                        l0: Some(OverlappingLevel {
+                            sub_levels: vec![],
+                            total_file_size: 0,
+                        }),
+                    },
+                );
+            }
             let levels = self
                 .levels
                 .get_mut(compaction_group_id)

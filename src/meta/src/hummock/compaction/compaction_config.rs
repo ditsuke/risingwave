@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use risingwave_common::config::constant::hummock::CompactionFilterFlag;
+use risingwave_hummock_sdk::compaction_group::hummock_version_ext::MAX_LEVEL;
 use risingwave_pb::hummock::compaction_config::CompactionMode;
 use risingwave_pb::hummock::CompactionConfig;
 
@@ -24,7 +25,6 @@ const DEFAULT_MAX_BYTES_FOR_LEVEL_BASE: u64 = 512 * 1024 * 1024; // 512MB
 const DEFAULT_TIER_COMPACT_TRIGGER_NUMBER: u64 = 8;
 const DEFAULT_TARGET_FILE_SIZE_BASE: u64 = 32 * 1024 * 1024; // 32MB
 const DEFAULT_MAX_SUB_COMPACTION: u32 = 4;
-const MAX_LEVEL: u64 = 6;
 
 pub struct CompactionConfigBuilder {
     config: CompactionConfig,
