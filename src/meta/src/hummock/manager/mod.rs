@@ -607,15 +607,15 @@ where
             .id_gen_manager()
             .generate::<{ IdCategory::HummockCompactionTask }>()
             .await?;
+        let group_config = self
+            .compaction_group_manager()
+            .compaction_group(compaction_group_id)
+            .await
+            .ok_or(Error::InvalidCompactionGroup(compaction_group_id))?;
         if !compaction
             .compaction_statuses
             .contains_key(&compaction_group_id)
         {
-            let group_config = self
-                .compaction_group_manager()
-                .compaction_group(compaction_group_id)
-                .await
-                .ok_or(Error::InvalidCompactionGroup(compaction_group_id))?;
             let mut compact_statuses =
                 BTreeMapTransaction::new(&mut compaction.compaction_statuses);
             let new_compact_status = compact_statuses.new_entry_insert_txn(
