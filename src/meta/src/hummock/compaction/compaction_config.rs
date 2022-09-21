@@ -59,6 +59,7 @@ impl CompactionConfigBuilder {
                     | CompactionFilterFlag::TTL)
                     .into(),
                 max_sub_compaction: DEFAULT_MAX_SUB_COMPACTION,
+                level0_pause_write_trigger_file_numer: u64::MAX,
             },
         }
     }
@@ -103,4 +104,5 @@ builder_field! {
     compression_algorithm: Vec<String>,
     compaction_filter_mask: u32,
     max_sub_compaction: u32,
+    level0_pause_write_trigger_file_numer: u64,
 }

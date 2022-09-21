@@ -150,7 +150,7 @@ where
     }
 }
 
-pub fn calc_should_pause_write(levels: &Levels, _compaction_config: &CompactionConfig) -> bool {
+pub fn calc_should_pause_write(levels: &Levels, compaction_config: &CompactionConfig) -> bool {
     // TODO refine this
     let l0_file_number = levels
         .l0
@@ -160,8 +160,7 @@ pub fn calc_should_pause_write(levels: &Levels, _compaction_config: &CompactionC
         .iter()
         .map(|l| l.table_infos.len())
         .sum::<usize>();
-    let l0_file_number_threshold = 500;
-    l0_file_number >= l0_file_number_threshold
+    l0_file_number >= compaction_config.level0_pause_write_trigger_file_numer as usize
 }
 
 #[cfg(test)]
