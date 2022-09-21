@@ -362,14 +362,9 @@ def section_object_storage(outer_panels):
                     "sum(rate(object_store_operation_latency_count{type=~'read|readv|list|metadata'}[$__rate_interval])) by (le, media_type, job, instance)", "{{media_type}}-read - {{job}} @ {{instance}}"
                 ),
             ]),
-            panels.timeseries_bytes("Operation Size",
-                quantile(lambda quantile, legend: panels.target(
-                    f"histogram_quantile({quantile}, sum(rate(object_store_operation_bytes_bucket[$__rate_interval])) by (le, type, job, instance))", "{{type}}" + f" p{legend}" + " - {{job}} @ {{instance}}"
-                ), [50, 90, 99, "max"])
-            ),
-            panels.timeseries_count("Operation Failure Count", [
+            panels.timeseries_ops("Operation Failure Rate", [
                 panels.target(
-                    "sum(object_store_failure_count) by (instance, job, type)", "{{type}} - {{job}} @ {{instance}}"
+                    "sum(rate(object_store_failure_count[$__rate_interval])) by (instance, job, type)", "{{type}} - {{job}} @ {{instance}}"
                 )
             ]),
             panels.timeseries_dollar("Estimated S3 Cost (Realtime)", [
@@ -638,7 +633,20 @@ def section_streaming_actors(outer_panels):
                 panels.target(
                     "stream_join_cached_estimated_size", "{{actor_id}} {{side}}"
                 ),
-            ])
+            ]),
+            panels.timeseries_actor_ops("Aggregation Executor Cache", [
+                panels.target(
+                    "rate(stream_agg_lookup_miss_count[$__rate_interval])", "cache miss {{actor_id}}"
+                ),
+                panels.target(
+                    "rate(stream_agg_lookup_total_count[$__rate_interval])", "total lookups {{actor_id}}"
+                ),
+            ]),
+            panels.timeseries_count("Aggregation Cached Keys", [
+                panels.target(
+                    "stream_agg_cached_keys", "{{actor_id}}"
+                ),
+            ]),
         ])
     ]
 
